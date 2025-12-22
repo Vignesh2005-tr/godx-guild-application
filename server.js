@@ -29,7 +29,7 @@ const client = new Client({
   intents: [GatewayIntentBits.Guilds, GatewayIntentBits.GuildMembers],
 });
 
-client.once("clientReady", () => {
+client.once("Ready", () => {
   console.log(`✅ Bot logged in as ${client.user.tag}`);
 });
 
@@ -193,3 +193,4 @@ function startServer(port) {
 }
 
 startServer(PORT);
+
