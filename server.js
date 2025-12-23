@@ -36,7 +36,10 @@ client.once("ready", () => {
   console.log(`✅ Bot logged in as ${client.user.tag}`);
 });
 
-client.login(BOT_TOKEN);
+client.login(BOT_TOKEN).catch(err => {
+  console.error("❌ Bot login failed:", err.message);
+  process.exit(1);
+});
 
 /* ---------- UPLOADS ---------- */
 const UPLOAD_DIR = "uploads";
@@ -64,44 +67,42 @@ app.post("/apply", upload.single("discord_pic"), async (req, res) => {
     const devices = toArray(req.body.devices);
 
     if (!discordId || !validDiscordId(discordId)) {
-      return res.status(400).json({
-        success: false,
-        message: "Invalid Discord ID",
-      });
+      return res.status(400).json({ success: false, message: "Invalid Discord ID" });
     }
 
-    const guild = await client.guilds.fetch(GUILD_ID);
-    await guild.roles.fetch();
+    let guild;
+    try {
+      guild = await client.guilds.fetch(GUILD_ID);
+      await guild.roles.fetch();
+    } catch (err) {
+      console.error("Guild fetch error:", err.message);
+      return res.status(500).json({ success: false, message: "Guild not found" });
+    }
 
     const applyRole = guild.roles.cache.get(APPLY_ROLE_ID);
     if (!applyRole) {
-      return res.status(500).json({
-        success: false,
-        message: "Apply role not found",
-      });
+      return res.status(500).json({ success: false, message: "Apply role not found" });
     }
 
     const member = await guild.members.fetch(discordId).catch(() => null);
     if (!member) {
-      return res.status(404).json({
-        success: false,
-        message: "User not found in server",
-      });
+      return res.status(404).json({ success: false, message: "User not found in server" });
     }
 
     const botMember = await guild.members.fetch(client.user.id);
     if (botMember.roles.highest.position <= applyRole.position) {
-      return res.status(403).json({
-        success: false,
-        message: "Bot role must be above Apply role",
-      });
+      return res.status(403).json({ success: false, message: "Bot role must be above Apply role" });
     }
 
-    await member.roles.add(applyRole);
+    await member.roles.add(applyRole).catch(err => {
+      console.error("Role add error:", err.message);
+    });
 
     try {
       await member.send("✅ Your GODX ESPORTS application was received!");
-    } catch {}
+    } catch {
+      console.warn("Could not DM user.");
+    }
 
     let imageUrl = member.user.displayAvatarURL({ dynamic: true, size: 512 });
     if (req.file) {
@@ -129,6 +130,11 @@ app.post("/apply", upload.single("discord_pic"), async (req, res) => {
       ],
     };
 
+    if (!WEBHOOK_URL.startsWith("https://")) {
+      console.error("Invalid webhook URL");
+      return res.status(500).json({ success: false, message: "Invalid webhook URL" });
+    }
+
     await fetch(WEBHOOK_URL, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
@@ -137,7 +143,7 @@ app.post("/apply", upload.single("discord_pic"), async (req, res) => {
 
     res.json({ success: true });
   } catch (err) {
-    console.error(err);
+    console.error("Apply error:", err);
     res.status(500).json({ success: false, message: "Server error" });
   }
 });
