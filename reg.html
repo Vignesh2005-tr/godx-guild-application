@@ -5,29 +5,39 @@
   <title>GODX Guild Apply</title>
   <link rel="stylesheet" href="styles.css">
 </head>
+
 <body style="text-align:center;">
   <h1>𝗚𝗨𝗜𝗟𝗗 𝗥𝗘𝗤𝗨𝗜𝗥𝗘𝗠𝗘𝗡𝗧 – 𝗚𝗢𝗗X 𝗘𝗦𝗣𝗢𝗥𝗧𝗦</h1>
-  <h2>𝐎𝐅𝐅𝐈𝐂𝐈𝐀𝐋 𝐆𝐔𝐈𝐋𝐃 𝐎𝐅 𝐆𝐎𝐃𝟒𝟒𝟒</h2>
-  <img src="image/god444.jpg" style="width:150px; height:150px; border-radius:50%; object-fit:cover;">
-  <h4>GODX ESPORTS – APPLY</h4>
 
-  <form id="GuildFORM" enctype="multipart/form-data" method="POST" action="http://localhost:3000/apply">
+  <form id="GuildFORM" enctype="multipart/form-data">
     <table border="1" style="margin:auto;">
-      <tr><td>NAME</td><td><input type="text" name="pname" required></td></tr>
-      <tr><td>DISCORD USER ID</td><td><input type="text" name="discordId" placeholder="Enable Dev Mode → Copy ID" required></td></tr>
-      <tr><td>AGE</td><td><input type="number" name="age" required></td></tr>
-      <tr><td>FREEFIRE EXPERIENCE</td><td><input type="text" name="experience" required></td></tr>
+      <tr><td>NAME</td><td><input type="text" name="name" required></td></tr>
+
+      <tr><td>DISCORD USER ID</td>
+        <td><input type="text" name="discordId" required></td></tr>
+
+      <tr><td>AGE</td>
+        <td><input type="number" name="age" required></td></tr>
+
+      <tr><td>EXPERIENCE</td>
+        <td><input type="text" name="experience"></td></tr>
+
       <tr><td>ROLE</td><td>
-        <label><input type="checkbox" name="role[]" value="Rusher"> Rusher</label><br>
-        <label><input type="checkbox" name="role[]" value="Sniper"> Sniper</label><br>
-        <label><input type="checkbox" name="role[]" value="All Rounder"> All Rounder</label>
+        <label><input type="checkbox" name="roles" value="Rusher"> Rusher</label><br>
+        <label><input type="checkbox" name="roles" value="Sniper"> Sniper</label><br>
+        <label><input type="checkbox" name="roles" value="All Rounder"> All Rounder</label>
       </td></tr>
+
       <tr><td>DEVICE</td><td>
-        <label><input type="checkbox" name="device[]" value="Mobile"> Mobile</label><br>
-        <label><input type="checkbox" name="device[]" value="PC"> PC</label>
+        <label><input type="checkbox" name="devices" value="Mobile"> Mobile</label><br>
+        <label><input type="checkbox" name="devices" value="PC"> PC</label>
       </td></tr>
-      <tr><td>DISCORD PROFILE IMAGE</td><td><input type="file" name="discord_pic"></td></tr>
-    </table><br>
+
+      <tr><td>PROFILE IMAGE</td>
+        <td><input type="file" name="discord_pic"></td></tr>
+    </table>
+
+    <br>
     <button type="submit">SUBMIT</button>
   </form>
 
@@ -39,20 +49,21 @@
       const fd = new FormData(form);
 
       try {
-        const res = await fetch("http://localhost:5000/apply", {
+        const res = await fetch("/apply", {
           method: "POST",
           body: fd
         });
 
         const data = await res.json();
+
         if (data.success) {
-          alert("✅ Application Submitted & Role Granted!");
+          alert("✅ Application Submitted!");
           form.reset();
         } else {
-          alert("❌ Error: " + data.message);
+          alert("❌ " + data.message);
         }
       } catch (err) {
-        alert("❌ Cannot connect to server. Is server.js running?");
+        alert("❌ Server connection failed");
         console.error(err);
       }
     });
