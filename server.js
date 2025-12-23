@@ -41,6 +41,14 @@ client.login(BOT_TOKEN).catch(err => {
   process.exit(1);
 });
 
+client.on('interactionCreate', async interaction => {
+  if (!interaction.isChatInputCommand()) return;
+
+  if (interaction.commandName === 'ping') {
+    await interaction.reply('🏓 Pong! Bot is alive.');
+  }
+});
+
 /* ---------- UPLOADS ---------- */
 const UPLOAD_DIR = "uploads";
 if (!fs.existsSync(UPLOAD_DIR)) {
@@ -155,3 +163,4 @@ app.use("/uploads", express.static(UPLOAD_DIR));
 app.listen(PORT, () => {
   console.log(`🚀 Server running on port ${PORT}`);
 });
+
