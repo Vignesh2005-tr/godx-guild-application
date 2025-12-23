@@ -1,4 +1,4 @@
-// server.js (final)
+// server.js (Railway FINAL FIXED)
 // Run with: node server.js
 
 import express from "express";
@@ -14,22 +14,25 @@ dotenv.config();
 
 const app = express();
 app.use(cors());
-app.use(express.urlencoded({ extended: true })); // parse form fields
+app.use(express.urlencoded({ extended: true }));
 
 // ---------------- ENV CONFIG ----------------
-const BOT_TOKEN = process.env.BOT_TOKEN;
-const GUILD_ID = process.env.GUILD_ID;
-const APPLY_ROLE_ID = process.env.APPLY_ROLE_ID;
-const ADMIN_ROLE_ID = process.env.ADMIN_ROLE_ID;
-const WEBHOOK_URL = process.env.WEBHOOK_URL;
-const PORT = Number(process.env.PORT || 5000);
+const {
+  BOT_TOKEN,
+  GUILD_ID,
+  APPLY_ROLE_ID,
+  ADMIN_ROLE_ID,
+  WEBHOOK_URL,
+  PORT = 8080,
+  RAILWAY_PUBLIC_DOMAIN, // optional
+} = process.env;
 
 // ---------------- DISCORD CLIENT ----------------
 const client = new Client({
   intents: [GatewayIntentBits.Guilds, GatewayIntentBits.GuildMembers],
 });
 
-client.once("Ready", () => {
+client.once("ready", () => {
   console.log(`✅ Bot logged in as ${client.user.tag}`);
 });
 
@@ -43,22 +46,17 @@ if (!fs.existsSync(UPLOAD_DIR)) {
 
 // ---------------- MULTER SETUP ----------------
 const storage = multer.diskStorage({
-  destination: (req, file, cb) => cb(null, UPLOAD_DIR),
-  filename: (req, file, cb) =>
+  destination: (_, __, cb) => cb(null, UPLOAD_DIR),
+  filename: (_, file, cb) =>
     cb(null, Date.now() + path.extname(file.originalname)),
 });
 const upload = multer({ storage });
 
 // ---------------- HELPERS ----------------
-function toArray(value) {
-  if (!value) return [];
-  return Array.isArray(value) ? value : [value];
-}
+const toArray = (v) => (!v ? [] : Array.isArray(v) ? v : [v]);
 
-function isValidDiscordId(id) {
-  // Snowflakes are numeric strings; basic check
-  return typeof id === "string" && /^\d{17,20}$/.test(id);
-}
+const isValidDiscordId = (id) =>
+  typeof id === "string" && /^\d{17,20}$/.test(id);
 
 // ---------------- APPLY ENDPOINT ----------------
 app.post("/apply", upload.single("discord_pic"), async (req, res) => {
@@ -66,32 +64,16 @@ app.post("/apply", upload.single("discord_pic"), async (req, res) => {
   const roles = toArray(req.body.roles);
   const devices = toArray(req.body.devices);
 
-  console.log("Incoming form data:", {
-    discordId,
-    name,
-    age,
-    experience,
-    roles,
-    devices,
-    file: req.file?.filename,
-  });
-
-  if (!discordId) {
+  if (!discordId || !isValidDiscordId(discordId)) {
     return res
       .status(400)
-      .json({ success: false, message: "Discord ID is required" });
-  }
-
-  if (!isValidDiscordId(discordId)) {
-    return res
-      .status(400)
-      .json({ success: false, message: "Invalid Discord ID format" });
+      .json({ success: false, message: "Invalid Discord ID" });
   }
 
   try {
     const guild = await client.guilds.fetch(GUILD_ID);
-
     await guild.roles.fetch();
+
     const applyRole = guild.roles.cache.get(APPLY_ROLE_ID);
     if (!applyRole) {
       return res
@@ -103,48 +85,50 @@ app.post("/apply", upload.single("discord_pic"), async (req, res) => {
     if (!member) {
       return res
         .status(404)
-        .json({ success: false, message: "User not found in server" });
+        .json({ success: false, message: "User not in server" });
     }
 
     const botMember = await guild.members.fetch(client.user.id);
-    const botRolePosition = botMember.roles.highest.position;
-    if (botRolePosition <= applyRole.position) {
+    if (botMember.roles.highest.position <= applyRole.position) {
       return res.status(403).json({
         success: false,
-        message:
-          "Bot role is not high enough to assign the Apply Role. Move bot role above the Apply Role.",
+        message: "Bot role must be above Apply role",
       });
     }
 
-    // Assign role
     await member.roles.add(applyRole);
 
-    // DM confirmation
+    // DM user
     try {
       await member.send(
-        `👋 Hi ${name || "Gamer"}! Your application to **GODX ESPORTS** was received. Welcome! 🎮`
+        `👋 Hi ${name || "Gamer"}! Your application to **GODX ESPORTS** was received 🎮`
       );
-    } catch (dmError) {
-      console.warn("⚠️ Could not send DM to user:", dmError.message);
-    }
+    } catch {}
 
-    // Avatar or uploaded image
-    let imageUrl = member.user.displayAvatarURL({ dynamic: true, size: 512 });
+    // Image URL (PUBLIC)
+    let imageUrl = member.user.displayAvatarURL({ size: 512 });
     if (req.file) {
-      imageUrl = `http://localhost:${PORT}/uploads/${req.file.filename}`;
+      const baseUrl = RAILWAY_PUBLIC_DOMAIN
+        ? `https://${RAILWAY_PUBLIC_DOMAIN}`
+        : "https://YOUR-RAILWAY-DOMAIN.up.railway.app";
+
+      imageUrl = `${baseUrl}/uploads/${req.file.filename}`;
     }
 
-    // Webhook embed
+    // Webhook payload
     const payload = {
-      content: `<@&${ADMIN_ROLE_ID}>\n👤 New Applicant: <@${discordId}>`,
-      allowed_mentions: { roles: [ADMIN_ROLE_ID], users: [discordId] },
+      content: `<@&${ADMIN_ROLE_ID}> | New Applicant <@${discordId}>`,
+      allowed_mentions: {
+        roles: [ADMIN_ROLE_ID],
+        users: [discordId],
+      },
       embeds: [
         {
           title: "🛡️ NEW GUILD APPLICATION – GODX ESPORTS",
           color: 0xff0000,
           fields: [
             { name: "Name", value: name || "N/A", inline: true },
-            { name: "Age", value: (age ?? "").toString() || "N/A", inline: true },
+            { name: "Age", value: age || "N/A", inline: true },
             { name: "Discord ID", value: discordId, inline: true },
             { name: "Experience", value: experience || "N/A" },
             { name: "Roles", value: roles.join(", ") || "N/A" },
@@ -162,35 +146,18 @@ app.post("/apply", upload.single("discord_pic"), async (req, res) => {
       body: JSON.stringify(payload),
     });
 
-    return res.json({
-      success: true,
-      message: "Application submitted successfully",
-    });
+    res.json({ success: true, message: "Application submitted" });
   } catch (err) {
-    console.error("Error handling application:", err);
-    return res.status(500).json({ success: false, message: err.message });
+    console.error(err);
+    res.status(500).json({ success: false, message: err.message });
   }
 });
 
 // ---------------- STATIC ----------------
 app.use("/uploads", express.static(UPLOAD_DIR));
 
-// ---------------- START SERVER ----------------
-function startServer(port) {
-  app
-    .listen(port)
-    .on("listening", () => {
-      console.log(`🌐 Server running on http://localhost:${port}`);
-    })
-    .on("error", (err) => {
-      if (err.code === "EADDRINUSE") {
-        console.warn(`⚠️ Port ${port} in use, trying ${port + 1}...`);
-        startServer(port + 1);
-      } else {
-        console.error("Server error:", err);
-      }
-    });
-}
-
-startServer(PORT);
+// ---------------- START SERVER (RAILWAY SAFE) ----------------
+app.listen(PORT, "0.0.0.0", () => {
+  console.log(`🌐 Server running on port ${PORT}`);
+});
 
