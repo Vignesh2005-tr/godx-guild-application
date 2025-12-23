@@ -32,7 +32,7 @@ const client = new Client({
   intents: [GatewayIntentBits.Guilds, GatewayIntentBits.GuildMembers],
 });
 
-client.once("ready", () => {
+client.once("clientReady", () => {
   console.log(`✅ Bot logged in as ${client.user.tag}`);
 });
 
@@ -162,4 +162,5 @@ app.use("/uploads", express.static(UPLOAD_DIR));
 /* ---------- START ---------- */
 app.listen(PORT, () => {
   console.log(`🚀 Server running on port ${PORT}`);
+
 });
