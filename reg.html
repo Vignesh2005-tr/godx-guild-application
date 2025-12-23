@@ -1,36 +1,35 @@
+// Replace your script block at the bottom of reg.html with this:
 <script>
-    document.getElementById('applicationForm').addEventListener('submit', async function(e) {
-        e.preventDefault();
+  const form = document.getElementById("GuildFORM");
 
-        const formData = new FormData(this);
-        const data = {
-            name: formData.get('name'),
-            discordId: formData.get('discordId'),
-            age: formData.get('age'),
-            experience: formData.get('experience'),
-            role: formData.getAll('role'), 
-            device: formData.getAll('device')
-        };
+  form.addEventListener("submit", async (e) => {
+    e.preventDefault();
+    const fd = new FormData(form);
+    const btn = form.querySelector("button[type=submit]");
+    btn.disabled = true;
+    btn.textContent = "Submitting...";
 
-        try {
-            // Updated to your Railway URL
-            const response = await fetch('https://godx-guild-application-production.up.railway.app/submit', {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json'
-                },
-                body: JSON.stringify(data)
-            });
+    try {
+      // Use your ACTUAL Railway production link
+      const res = await fetch("https://godx-guild-application-production.up.railway.app/apply", { 
+        method: "POST", 
+        body: fd 
+      });
+      
+      const data = await res.json();
 
-            if (response.ok) {
-                alert('Application submitted successfully!');
-                window.location.href = 'gr.html';
-            } else {
-                alert('Submission failed. Check your backend logs.');
-            }
-        } catch (error) {
-            console.error('Connection Error:', error);
-            alert('Server connection failed. Make sure your Railway app is active.');
-        }
-    });
+      if (data.success) {
+        alert("✅ Application Submitted Successfully!");
+        window.location.href = "gr.html";
+      } else {
+        alert("❌ Submission failed: " + (data.message || "Unknown error"));
+      }
+    } catch (err) {
+      console.error(err);
+      alert("❌ Server connection failed. Check if Railway is Online.");
+    } finally {
+      btn.disabled = false;
+      btn.textContent = "Submit";
+    }
+  });
 </script>
