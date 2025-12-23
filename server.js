@@ -1,31 +1,33 @@
-// server.js (Railway FINAL FIXED)
-// Run with: node server.js
+// server.js — GODX Guild Application (Railway Production Safe)
+// Node 18+ | Discord.js v14 | Express
 
 import express from "express";
 import cors from "cors";
 import dotenv from "dotenv";
-import fs from "fs";
-import path from "path";
 import multer from "multer";
-import fetch from "node-fetch";
 import { Client, GatewayIntentBits } from "discord.js";
 
-dotenv.config();
+// ---------------- LOAD ENV (LOCAL ONLY) ----------------
+if (process.env.NODE_ENV !== "production") {
+  dotenv.config();
+}
 
+// ---------------- EXPRESS SETUP ----------------
 const app = express();
 app.use(cors());
 app.use(express.urlencoded({ extended: true }));
+app.use(express.json());
 
-// ---------------- ENV CONFIG ----------------
+// ---------------- ENV ----------------
 const {
   BOT_TOKEN,
   GUILD_ID,
   APPLY_ROLE_ID,
   ADMIN_ROLE_ID,
   WEBHOOK_URL,
-  PORT = 8080,
-  RAILWAY_PUBLIC_DOMAIN, // optional
 } = process.env;
+
+const PORT = process.env.PORT || 3000;
 
 // ---------------- DISCORD CLIENT ----------------
 const client = new Client({
@@ -38,39 +40,37 @@ client.once("ready", () => {
 
 client.login(BOT_TOKEN);
 
-// ---------------- UPLOADS FOLDER ----------------
-const UPLOAD_DIR = "uploads";
-if (!fs.existsSync(UPLOAD_DIR)) {
-  fs.mkdirSync(UPLOAD_DIR, { recursive: true });
-}
-
-// ---------------- MULTER SETUP ----------------
-const storage = multer.diskStorage({
-  destination: (_, __, cb) => cb(null, UPLOAD_DIR),
-  filename: (_, file, cb) =>
-    cb(null, Date.now() + path.extname(file.originalname)),
+// ---------------- MULTER (MEMORY — NO FILESYSTEM) ----------------
+const upload = multer({
+  storage: multer.memoryStorage(),
+  limits: { fileSize: 5 * 1024 * 1024 }, // 5MB
 });
-const upload = multer({ storage });
 
 // ---------------- HELPERS ----------------
 const toArray = (v) => (!v ? [] : Array.isArray(v) ? v : [v]);
-
 const isValidDiscordId = (id) =>
   typeof id === "string" && /^\d{17,20}$/.test(id);
 
 // ---------------- APPLY ENDPOINT ----------------
 app.post("/apply", upload.single("discord_pic"), async (req, res) => {
-  const { discordId, name, age, experience } = req.body;
-  const roles = toArray(req.body.roles);
-  const devices = toArray(req.body.devices);
-
-  if (!discordId || !isValidDiscordId(discordId)) {
-    return res
-      .status(400)
-      .json({ success: false, message: "Invalid Discord ID" });
-  }
-
   try {
+    if (!client.isReady()) {
+      return res.status(503).json({
+        success: false,
+        message: "Bot is starting, please try again in a few seconds",
+      });
+    }
+
+    const { discordId, name, age, experience } = req.body;
+    const roles = toArray(req.body.roles);
+    const devices = toArray(req.body.devices);
+
+    if (!discordId || !isValidDiscordId(discordId)) {
+      return res
+        .status(400)
+        .json({ success: false, message: "Invalid Discord ID" });
+    }
+
     const guild = await client.guilds.fetch(GUILD_ID);
     await guild.roles.fetch();
 
@@ -96,26 +96,17 @@ app.post("/apply", upload.single("discord_pic"), async (req, res) => {
       });
     }
 
+    // Give role
     await member.roles.add(applyRole);
 
-    // DM user
+    // DM user (optional)
     try {
       await member.send(
-        `👋 Hi ${name || "Gamer"}! Your application to **GODX ESPORTS** was received 🎮`
+        `👋 Hi ${name || "Gamer"}!\nYour application to **GODX ESPORTS** has been received 🎮`
       );
     } catch {}
 
-    // Image URL (PUBLIC)
-    let imageUrl = member.user.displayAvatarURL({ size: 512 });
-    if (req.file) {
-      const baseUrl = RAILWAY_PUBLIC_DOMAIN
-        ? `https://${RAILWAY_PUBLIC_DOMAIN}`
-        : "https://YOUR-RAILWAY-DOMAIN.up.railway.app";
-
-      imageUrl = `${baseUrl}/uploads/${req.file.filename}`;
-    }
-
-    // Webhook payload
+    // ---------------- WEBHOOK ----------------
     const payload = {
       content: `<@&${ADMIN_ROLE_ID}> | New Applicant <@${discordId}>`,
       allowed_mentions: {
@@ -134,30 +125,44 @@ app.post("/apply", upload.single("discord_pic"), async (req, res) => {
             { name: "Roles", value: roles.join(", ") || "N/A" },
             { name: "Devices", value: devices.join(", ") || "N/A" },
           ],
-          image: { url: imageUrl },
           timestamp: new Date(),
         },
       ],
     };
 
+    const form = new FormData();
+    form.append("payload_json", JSON.stringify(payload));
+
+    if (req.file) {
+      form.append("files[0]", req.file.buffer, {
+        filename: "application.png",
+        contentType: req.file.mimetype,
+      });
+    }
+
     await fetch(WEBHOOK_URL, {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(payload),
+      body: form,
     });
 
-    res.json({ success: true, message: "Application submitted" });
+    return res.json({
+      success: true,
+      message: "Application submitted successfully",
+    });
   } catch (err) {
-    console.error(err);
-    res.status(500).json({ success: false, message: err.message });
+    console.error("❌ APPLY ERROR:", err);
+    return res
+      .status(500)
+      .json({ success: false, message: "Internal server error" });
   }
 });
 
-// ---------------- STATIC ----------------
-app.use("/uploads", express.static(UPLOAD_DIR));
+// ---------------- HEALTH CHECK ----------------
+app.get("/", (_, res) => {
+  res.send("✅ GODX Guild Application API is running");
+});
 
-// ---------------- START SERVER (RAILWAY SAFE) ----------------
+// ---------------- START SERVER ----------------
 app.listen(PORT, "0.0.0.0", () => {
   console.log(`🌐 Server running on port ${PORT}`);
 });
-
