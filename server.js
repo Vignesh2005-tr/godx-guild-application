@@ -1,6 +1,3 @@
-// server.js
-// Run with: node server.js
-
 import express from "express";
 import cors from "cors";
 import dotenv from "dotenv";
@@ -14,12 +11,12 @@ dotenv.config();
 
 const app = express();
 
-/* ================= MIDDLEWARE ================= */
+/* ---------- MIDDLEWARE ---------- */
 app.use(cors());
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
-/* ================= ENV ================= */
+/* ---------- ENV ---------- */
 const {
   BOT_TOKEN,
   GUILD_ID,
@@ -30,7 +27,7 @@ const {
 
 const PORT = process.env.PORT || 5000;
 
-/* ================= DISCORD CLIENT ================= */
+/* ---------- DISCORD BOT ---------- */
 const client = new Client({
   intents: [GatewayIntentBits.Guilds, GatewayIntentBits.GuildMembers],
 });
@@ -41,13 +38,12 @@ client.once("ready", () => {
 
 client.login(BOT_TOKEN);
 
-/* ================= UPLOADS ================= */
+/* ---------- UPLOADS ---------- */
 const UPLOAD_DIR = "uploads";
 if (!fs.existsSync(UPLOAD_DIR)) {
   fs.mkdirSync(UPLOAD_DIR, { recursive: true });
 }
 
-/* ================= MULTER ================= */
 const storage = multer.diskStorage({
   destination: (_, __, cb) => cb(null, UPLOAD_DIR),
   filename: (_, file, cb) =>
@@ -56,18 +52,18 @@ const storage = multer.diskStorage({
 
 const upload = multer({ storage });
 
-/* ================= HELPERS ================= */
+/* ---------- HELPERS ---------- */
 const toArray = (v) => (Array.isArray(v) ? v : v ? [v] : []);
-const isValidDiscordId = (id) => /^\d{17,20}$/.test(id);
+const validDiscordId = (id) => /^\d{17,20}$/.test(id);
 
-/* ================= APPLY ROUTE ================= */
+/* ---------- APPLY API ---------- */
 app.post("/apply", upload.single("discord_pic"), async (req, res) => {
   try {
-    const { discordId, name, age, experience } = req.body;
+    const { name, discordId, age, experience } = req.body;
     const roles = toArray(req.body.roles);
     const devices = toArray(req.body.devices);
 
-    if (!discordId || !isValidDiscordId(discordId)) {
+    if (!discordId || !validDiscordId(discordId)) {
       return res.status(400).json({
         success: false,
         message: "Invalid Discord ID",
@@ -93,7 +89,6 @@ app.post("/apply", upload.single("discord_pic"), async (req, res) => {
       });
     }
 
-    // Check bot role position
     const botMember = await guild.members.fetch(client.user.id);
     if (botMember.roles.highest.position <= applyRole.position) {
       return res.status(403).json({
@@ -102,33 +97,20 @@ app.post("/apply", upload.single("discord_pic"), async (req, res) => {
       });
     }
 
-    // Assign role
     await member.roles.add(applyRole);
 
-    // DM user (optional)
     try {
-      await member.send(
-        `👋 Hi ${name || "Gamer"}!\nYour **GODX ESPORTS** application was received 🎮`
-      );
+      await member.send("✅ Your GODX ESPORTS application was received!");
     } catch {}
 
-    // Image URL (NO localhost)
-    let imageUrl = member.user.displayAvatarURL({
-      dynamic: true,
-      size: 512,
-    });
-
+    let imageUrl = member.user.displayAvatarURL({ dynamic: true, size: 512 });
     if (req.file) {
       imageUrl = `${req.protocol}://${req.get("host")}/uploads/${req.file.filename}`;
     }
 
-    // Discord webhook
     const payload = {
       content: `<@&${ADMIN_ROLE_ID}> New Applicant: <@${discordId}>`,
-      allowed_mentions: {
-        roles: [ADMIN_ROLE_ID],
-        users: [discordId],
-      },
+      allowed_mentions: { roles: [ADMIN_ROLE_ID] },
       embeds: [
         {
           title: "🛡️ NEW GUILD APPLICATION",
@@ -153,23 +135,17 @@ app.post("/apply", upload.single("discord_pic"), async (req, res) => {
       body: JSON.stringify(payload),
     });
 
-    res.json({
-      success: true,
-      message: "Application submitted successfully",
-    });
+    res.json({ success: true });
   } catch (err) {
     console.error(err);
-    res.status(500).json({
-      success: false,
-      message: "Server error",
-    });
+    res.status(500).json({ success: false, message: "Server error" });
   }
 });
 
-/* ================= STATIC FILES ================= */
+/* ---------- STATIC ---------- */
 app.use("/uploads", express.static(UPLOAD_DIR));
 
-/* ================= START SERVER ================= */
+/* ---------- START ---------- */
 app.listen(PORT, () => {
   console.log(`🚀 Server running on port ${PORT}`);
 });
