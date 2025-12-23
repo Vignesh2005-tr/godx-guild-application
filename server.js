@@ -1,24 +1,25 @@
-// server.js — GODX Guild Application (Railway Production Safe)
-// Node 18+ | Discord.js v14 | Express
+// server.js
+// Run with: node server.js
 
 import express from "express";
 import cors from "cors";
 import dotenv from "dotenv";
+import fs from "fs";
+import path from "path";
 import multer from "multer";
+import fetch from "node-fetch";
 import { Client, GatewayIntentBits } from "discord.js";
 
-// ---------------- LOAD ENV (LOCAL ONLY) ----------------
-if (process.env.NODE_ENV !== "production") {
-  dotenv.config();
-}
+dotenv.config();
 
-// ---------------- EXPRESS SETUP ----------------
 const app = express();
-app.use(cors());
-app.use(express.urlencoded({ extended: true }));
-app.use(express.json());
 
-// ---------------- ENV ----------------
+/* ================= MIDDLEWARE ================= */
+app.use(cors());
+app.use(express.json());
+app.use(express.urlencoded({ extended: true }));
+
+/* ================= ENV ================= */
 const {
   BOT_TOKEN,
   GUILD_ID,
@@ -27,9 +28,9 @@ const {
   WEBHOOK_URL,
 } = process.env;
 
-const PORT = process.env.PORT || 3000;
+const PORT = process.env.PORT || 5000;
 
-// ---------------- DISCORD CLIENT ----------------
+/* ================= DISCORD CLIENT ================= */
 const client = new Client({
   intents: [GatewayIntentBits.Guilds, GatewayIntentBits.GuildMembers],
 });
@@ -40,35 +41,37 @@ client.once("ready", () => {
 
 client.login(BOT_TOKEN);
 
-// ---------------- MULTER (MEMORY — NO FILESYSTEM) ----------------
-const upload = multer({
-  storage: multer.memoryStorage(),
-  limits: { fileSize: 5 * 1024 * 1024 }, // 5MB
+/* ================= UPLOADS ================= */
+const UPLOAD_DIR = "uploads";
+if (!fs.existsSync(UPLOAD_DIR)) {
+  fs.mkdirSync(UPLOAD_DIR, { recursive: true });
+}
+
+/* ================= MULTER ================= */
+const storage = multer.diskStorage({
+  destination: (_, __, cb) => cb(null, UPLOAD_DIR),
+  filename: (_, file, cb) =>
+    cb(null, Date.now() + path.extname(file.originalname)),
 });
 
-// ---------------- HELPERS ----------------
-const toArray = (v) => (!v ? [] : Array.isArray(v) ? v : [v]);
-const isValidDiscordId = (id) =>
-  typeof id === "string" && /^\d{17,20}$/.test(id);
+const upload = multer({ storage });
 
-// ---------------- APPLY ENDPOINT ----------------
+/* ================= HELPERS ================= */
+const toArray = (v) => (Array.isArray(v) ? v : v ? [v] : []);
+const isValidDiscordId = (id) => /^\d{17,20}$/.test(id);
+
+/* ================= APPLY ROUTE ================= */
 app.post("/apply", upload.single("discord_pic"), async (req, res) => {
   try {
-    if (!client.isReady()) {
-      return res.status(503).json({
-        success: false,
-        message: "Bot is starting, please try again in a few seconds",
-      });
-    }
-
     const { discordId, name, age, experience } = req.body;
     const roles = toArray(req.body.roles);
     const devices = toArray(req.body.devices);
 
     if (!discordId || !isValidDiscordId(discordId)) {
-      return res
-        .status(400)
-        .json({ success: false, message: "Invalid Discord ID" });
+      return res.status(400).json({
+        success: false,
+        message: "Invalid Discord ID",
+      });
     }
 
     const guild = await client.guilds.fetch(GUILD_ID);
@@ -76,18 +79,21 @@ app.post("/apply", upload.single("discord_pic"), async (req, res) => {
 
     const applyRole = guild.roles.cache.get(APPLY_ROLE_ID);
     if (!applyRole) {
-      return res
-        .status(500)
-        .json({ success: false, message: "Apply role not found" });
+      return res.status(500).json({
+        success: false,
+        message: "Apply role not found",
+      });
     }
 
     const member = await guild.members.fetch(discordId).catch(() => null);
     if (!member) {
-      return res
-        .status(404)
-        .json({ success: false, message: "User not in server" });
+      return res.status(404).json({
+        success: false,
+        message: "User not found in server",
+      });
     }
 
+    // Check bot role position
     const botMember = await guild.members.fetch(client.user.id);
     if (botMember.roles.highest.position <= applyRole.position) {
       return res.status(403).json({
@@ -96,73 +102,74 @@ app.post("/apply", upload.single("discord_pic"), async (req, res) => {
       });
     }
 
-    // Give role
+    // Assign role
     await member.roles.add(applyRole);
 
     // DM user (optional)
     try {
       await member.send(
-        `👋 Hi ${name || "Gamer"}!\nYour application to **GODX ESPORTS** has been received 🎮`
+        `👋 Hi ${name || "Gamer"}!\nYour **GODX ESPORTS** application was received 🎮`
       );
     } catch {}
 
-    // ---------------- WEBHOOK ----------------
+    // Image URL (NO localhost)
+    let imageUrl = member.user.displayAvatarURL({
+      dynamic: true,
+      size: 512,
+    });
+
+    if (req.file) {
+      imageUrl = `${req.protocol}://${req.get("host")}/uploads/${req.file.filename}`;
+    }
+
+    // Discord webhook
     const payload = {
-      content: `<@&${ADMIN_ROLE_ID}> | New Applicant <@${discordId}>`,
+      content: `<@&${ADMIN_ROLE_ID}> New Applicant: <@${discordId}>`,
       allowed_mentions: {
         roles: [ADMIN_ROLE_ID],
         users: [discordId],
       },
       embeds: [
         {
-          title: "🛡️ NEW GUILD APPLICATION – GODX ESPORTS",
+          title: "🛡️ NEW GUILD APPLICATION",
           color: 0xff0000,
           fields: [
             { name: "Name", value: name || "N/A", inline: true },
-            { name: "Age", value: age || "N/A", inline: true },
+            { name: "Age", value: age?.toString() || "N/A", inline: true },
             { name: "Discord ID", value: discordId, inline: true },
             { name: "Experience", value: experience || "N/A" },
             { name: "Roles", value: roles.join(", ") || "N/A" },
             { name: "Devices", value: devices.join(", ") || "N/A" },
           ],
+          image: { url: imageUrl },
           timestamp: new Date(),
         },
       ],
     };
 
-    const form = new FormData();
-    form.append("payload_json", JSON.stringify(payload));
-
-    if (req.file) {
-      form.append("files[0]", req.file.buffer, {
-        filename: "application.png",
-        contentType: req.file.mimetype,
-      });
-    }
-
     await fetch(WEBHOOK_URL, {
       method: "POST",
-      body: form,
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(payload),
     });
 
-    return res.json({
+    res.json({
       success: true,
       message: "Application submitted successfully",
     });
   } catch (err) {
-    console.error("❌ APPLY ERROR:", err);
-    return res
-      .status(500)
-      .json({ success: false, message: "Internal server error" });
+    console.error(err);
+    res.status(500).json({
+      success: false,
+      message: "Server error",
+    });
   }
 });
 
-// ---------------- HEALTH CHECK ----------------
-app.get("/", (_, res) => {
-  res.send("✅ GODX Guild Application API is running");
-});
+/* ================= STATIC FILES ================= */
+app.use("/uploads", express.static(UPLOAD_DIR));
 
-// ---------------- START SERVER ----------------
-app.listen(PORT, "0.0.0.0", () => {
-  console.log(`🌐 Server running on port ${PORT}`);
+/* ================= START SERVER ================= */
+app.listen(PORT, () => {
+  console.log(`🚀 Server running on port ${PORT}`);
 });
