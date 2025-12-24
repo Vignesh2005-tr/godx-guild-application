@@ -8,6 +8,7 @@ body {
   background-image: url("image/king2.png");
   background-size: 2000px;
   color: black;
+   backdrop-filter: blur(20px);
 
  
 }
@@ -220,3 +221,4 @@ body {
     width: 90%;
   }
 }
+
