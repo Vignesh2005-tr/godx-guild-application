@@ -187,7 +187,7 @@ body {
     background-position: center;
     background-size: cover;
     background-attachment: scroll;
-     background-color:white;
+   color:white;
   }
 
   h1.welcome-title {
@@ -222,6 +222,7 @@ body {
     width: 90%;
   }
 }
+
 
 
 
