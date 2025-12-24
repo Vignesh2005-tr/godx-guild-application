@@ -1,0 +1,105 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <title>GODX Guild Apply</title>
+  <link rel="stylesheet" href="styles.css">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <link rel="icon" href="image/god444.jpg">
+</head>
+<body style="text-align:center;">
+  <h1>𝗚𝗨𝗜𝗟𝗗 𝗥𝗘𝗤𝗨𝗜𝗥𝗘𝗠𝗘𝗡𝗧 – 𝗚𝗢𝗗X 𝗘𝗦𝗣𝗢𝗥𝗧𝗦</h1>
+  <h2>𝐎𝐅𝐅𝐈𝐂𝐈𝐀𝐋 𝐆𝐔𝐈𝐋𝐃 𝐎𝐅 𝐆𝐎𝐃𝟒𝟒𝟒</h2>
+          <img class="god-img" src="image/god444.jpg" style="width:150px; height:150px; border-radius:50%; object-fit:cover;">
+  <h4>GODX ESPORTS – APPLY</h4>
+
+  <form id="GuildFORM" enctype="multipart/form-data" method="POST" action="http://localhost:3000/apply">
+    <table border="1" style="margin:auto;">
+      <tr><td>NAME</td><td><input type="text" name="pname" required></td></tr>
+      <tr><td>DISCORD USER ID</td><td><input type="text" name="discordId" placeholder="Enable Dev Mode → Copy ID" required></td></tr>
+      <tr><td>AGE</td><td><input type="number" name="age" required></td></tr>
+      <tr><td>FREEFIRE EXPERIENCE</td><td><input type="text" name="experience" required></td></tr>
+      <tr><td>Ex-Guild NAME</td><td><input type="text" name="exGuildName"></td></tr>
+      <tr><td>BR / CS</td><td><input type="text" name="rank" required></td></tr>
+      <tr><td>ROLE</td><td>
+        <label><input type="checkbox" name="role[]" value="Rusher"> Rusher</label><br>
+        <label><input type="checkbox" name="role[]" value="Sniper"> Sniper</label><br>
+        <label><input type="checkbox" name="role[]" value="All Rounder"> All Rounder</label>
+      </td></tr>
+      <tr><td>DEVICE</td><td>
+        <label><input type="checkbox" name="device[]" value="Mobile"> Mobile</label><br>
+        <label><input type="checkbox" name="device[]" value="PC"> PC</label>
+      </td></tr>
+      <tr><td><BR>DISCORD PROFILE IMAGE</td><td><input type="file" name="discord_pic"></td><BR></tr>
+    </table><br>
+     <button type="submit" class="join-button submit-btn">
+  <span class="btn-text">SUBMIT</span>
+  <span class="loader"></span>
+</button>
+
+    </form>
+
+        <hr>
+    <center><h2>OFFICIAL SOCIAL LINKS</h2></center>
+    <hr>
+
+    <div class="social-row social-center">
+        <a href="index.html" class="social-item">
+            <img src="image/home.png" alt="Home">
+            <span>Home</span>
+        </a>
+
+        <a href="https://discord.gg/sTeCMMvq" target="_blank" class="social-item">
+            <img src="image/DISCORD.png" alt="Discord">
+            <span>Discord</span>
+        </a>
+
+        <a href="https://www.instagram.com/god444.exe/" target="_blank" class="social-item">
+            <img src="image/instagram.png" alt="Instagram">
+            <span>Instagram</span>
+        </a>
+
+        <a href="https://www.youtube.com/@god444ff" target="_blank" class="social-item">
+            <img src="image/yt.png" alt="YouTube">
+            <span>YouTube</span>
+        </a>
+    </div>
+
+<script>
+  const form = document.getElementById("GuildFORM");
+  const submitBtn = document.querySelector(".submit-btn");
+
+  form.addEventListener("submit", async (e) => {
+    e.preventDefault();
+
+    submitBtn.classList.add("loading");
+
+    const fd = new FormData(form);
+
+    try {
+      const res = await fetch("http://localhost:5000/apply", {
+        method: "POST",
+        body: fd
+      });
+
+      const data = await res.json();
+
+      submitBtn.classList.remove("loading");
+
+      if (data.success) {
+        alert("✅ Application Submitted & Role Granted!");
+        form.reset();
+      } else {
+        alert("❌ Error: " + data.message);
+      }
+
+    } catch (err) {
+      submitBtn.classList.remove("loading");
+      alert("❌ Cannot connect to server. Is server.js running?");
+      console.error(err);
+    }
+  });
+</script>
+
+</body>
+</html>

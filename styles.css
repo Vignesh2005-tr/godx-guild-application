@@ -1,0 +1,222 @@
+/* =====================
+   PAGE BACKGROUND
+===================== */
+body {
+  margin: 0;
+  padding: 0;
+
+  background-image: url("image/king2.png");
+  background-size: 2000px;
+  color: black;
+
+ 
+}
+/* =====================
+   WELCOME TEXT ANIMATION
+===================== */
+.welcome-title {
+  font-size: 400%;
+  animation: slideDown 1.2s ease-out;
+}
+
+.sub-title {
+  font-size: 300%;
+  animation: slideDown 1.5s ease-out;
+  
+}
+
+@keyframes slideDown {
+  from { opacity: 0; transform: translateY(-60px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes slideUp {
+  from { opacity: 0; transform: translateY(60px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+.bold{
+    font-weight: bold; 
+    font-size: large;
+}
+
+/* =====================
+   LOGO GLOW ANIMATION
+===================== */
+.god-img {
+  width: 200px;
+  border-radius: 50%;
+  margin-top: 20px;
+  box-shadow: 0 0 25px red;
+  transition: transform 0.4s ease, box-shadow 0.4s ease;
+}
+
+.god-img:hover {
+  transform: scale(1.15) rotate(3deg);
+  box-shadow: 0 0 45px orange;
+}
+
+.god-guild {
+ height: 300px;
+ width: 300px;
+  transition: transform 0.4s ease, box-shadow 0.4s ease;
+}
+
+/* =====================
+   JOIN GUILD BUTTON 🔥
+===================== */
+.join-button {
+  padding: 15px 45px;
+  font-size: 18px;
+  font-weight: bold;
+  color: white;
+  background: linear-gradient(135deg, red, orange);
+  border: none;
+  border-radius: 30px;
+  cursor: pointer;
+  letter-spacing: 1px;
+  box-shadow: 0 0 20px rgba(255, 80, 0, 0.8);
+  animation: pulseGlow 2s infinite;
+  transition: transform 0.25s ease, box-shadow 0.25s ease;
+}
+
+.join-button:hover {
+  transform: scale(1.15);
+  box-shadow: 0 0 40px rgba(255, 120, 0, 1);
+}
+
+.join-button:active {
+  transform: scale(0.95);
+}
+
+@keyframes pulseGlow {
+  0%   { box-shadow: 0 0 15px red; }
+  50%  { box-shadow: 0 0 35px orange; }
+  100% { box-shadow: 0 0 15px red; }
+}
+
+/* =====================
+   SOCIAL ICONS ANIMATION
+===================== */
+.social-row {
+  display: flex;
+  justify-content: center;
+  gap: 40px;
+  margin-top: 20px;
+}
+
+.social-item {
+  text-decoration: none;
+  color: black;
+  font-weight: bold;
+  transition: transform 0.3s ease;
+}
+
+.social-item img {
+  width: 45px;
+  display: block;
+  margin: auto;
+  transition: transform 0.3s ease;
+}
+
+.social-item:hover {
+  transform: scale(1.2);
+}
+
+.video-container {
+  display: flex;
+  flex-direction: column;   /* 🔑 makes text go down */
+  justify-content: center;
+  align-items: center;
+  border: 2px solid #03030e;
+  margin: 10px auto;        /* center box horizontally */
+  width: 700px;
+  text-align: center;
+  max-width: 95%;
+  height: auto;
+
+}
+
+.video-title{
+    margin-top: 15px;
+}
+
+
+.submit-btn:hover {
+  transform: scale(1.08);
+  box-shadow: 0 0 25px rgba(255, 120, 0, 0.9);
+}
+
+.submit-btn:active {
+  transform: scale(0.95);
+}
+
+.btn-text {
+  display: inline-block;
+}
+
+.loader {
+  display: none;
+  width: 22px;
+  height: 22px;
+  border: 3px solid rgba(255,255,255,0.4);
+  border-top: 3px solid #fff;
+  border-radius: 50%;
+  animation: spin 1s linear infinite;
+}
+
+.submit-btn.loading .btn-text {
+  display: none;
+}
+
+.submit-btn.loading .loader {
+  display: inline-block;
+}
+
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
+
+/* =====================
+   MOBILE FIX 📱
+===================== */
+@media (max-width: 768px) {
+
+  body {
+    background-position: center;
+    background-size: cover;
+    background-attachment: scroll;
+  }
+
+  h1.welcome-title {
+    font-size: 42px;
+  }
+
+  h2.sub-title {
+    font-size: 22px;
+  }
+
+  .god-img {
+    width: 120px;
+  }
+
+  .join-button {
+    width: 90%;
+    max-width: 300px;
+    font-size: 16px;
+    padding: 14px;
+  }
+
+  .social-row {
+    flex-direction: row;
+    gap: 20px;
+  }
+
+  .social-item img {
+    width: 36px;
+  }
+
+  hr {
+    width: 90%;
+  }
+}
